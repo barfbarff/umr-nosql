@@ -116,9 +116,16 @@ public class H2Shop implements Shop, AutoCloseable {
             try (ResultSet generatedKeys = insertStmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     int newId = generatedKeys.getInt(1);
-                    return new Product(newId, productName);
+
+                    Product newProduct = new Product(newId, productName);
+
+                    System.out.println("[DEBUG]<H2>(addProductToShop): Added " + newProduct +
+                            " to the H2 DB");
+
+                    return newProduct;
                 } else {
-                    throw new SQLException("Failed to insert product " + productName);
+                    throw new SQLException("[ERROR]<H2>(registerCustomer): " +
+                            "Failed to insert Product " + productName);
                 }
             }
 
@@ -133,7 +140,7 @@ public class H2Shop implements Shop, AutoCloseable {
         String insertCustomerSql = "INSERT INTO customers (user_name) VALUES (?)";
 
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement insertStmt =  connection.prepareStatement(
+             PreparedStatement insertStmt = connection.prepareStatement(
                      insertCustomerSql,
                      Statement.RETURN_GENERATED_KEYS
              )
@@ -143,15 +150,22 @@ public class H2Shop implements Shop, AutoCloseable {
             int affectedRows = insertStmt.executeUpdate();
 
             if  (affectedRows == 0) {
-                throw new SQLException("Failed to insert customer " + userName);
+                throw new SQLException("[ERROR]<H2>(registerCustomer): " +
+                        "Failed to insert customer " + userName);
             }
 
             try (ResultSet generatedKeys = insertStmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     int newId = generatedKeys.getInt(1);
-                    return new Customer(newId, userName);
+
+                    Customer newCustomer = new  Customer(newId, userName);
+
+                    System.out.println("[DEBUG]<H2>(registerCustomer): Added " + newCustomer);
+
+                    return newCustomer;
                 } else {
-                    throw new SQLException("Failed to insert customer " + userName);
+                    throw new SQLException("[ERROR]<H2>(registerCustomer): " +
+                            "Failed to insert customer " + userName);
                 }
             }
 
@@ -215,12 +229,14 @@ public class H2Shop implements Shop, AutoCloseable {
 
                 connection.commit();
 
+                System.out.println("[INFO]<H2>(buyProduct): Transaction was successful!");
+
             } catch (SQLException e) {
-                System.err.println(e.getMessage());
+                System.out.println("[ERROR]<H2>(buyProduct): " + e.getMessage());
                 connection.rollback();
             }
         } catch(SQLException e) {
-            System.err.println(e.getMessage());
+            System.out.println("[ERROR]<H2>(buyProduct): " + e.getMessage());
         }
     }
 

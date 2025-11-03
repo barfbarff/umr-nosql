@@ -46,7 +46,7 @@ public class RedisCacheShop implements Shop {
            String key = getProductKey(newProduct.productId());
            String newProductJson = gson.toJson(newProduct);
            jedis.set(key, newProductJson);
-           System.out.println("CACHE(addProductToShop): " + newProduct);
+           System.out.println("[DEBUG]<Redis>(addProductToShop): Added " + newProduct + " to the cache");
        }
 
        return newProduct;
@@ -59,15 +59,29 @@ public class RedisCacheShop implements Shop {
 
     @Override
     public void buyProduct(Customer customer, Product product) {
+        System.out.println("~".repeat(35) + " TRANSACTION (RedisCache) " + "~".repeat(35));
+        System.out.println("[DEBUG]<Redis>(Input): " + customer);
+        System.out.println("[DEBUG]<Redis>(Input): " + product);
+
+        if (getProduct(product.productId()) == null) {
+            System.out.println("[INFO]<Redis>(buyProduct): Transaction was cancelled as " +
+                            "the Product was not found in the H2 DB");
+
+            System.out.println("[DEBUG]<Redis>(buyProduct): The product does not exist in the H2 DB. " +
+                    "Skip caching this product");
+            return;
+        }
+
         h2Shop.buyProduct(customer, product);
+
 
         String key = getCustomerPurchasesKey(customer.customerId());
         String productId = String.valueOf(product.productId());
 
         jedis.lpush(key, productId);
         jedis.ltrim(key, 0, 4);
-        System.out.println("CACHE(buyProduct): Purchases of " +
-                customer  + " - " + jedis.lrange(key, 0, -1));
+        System.out.println("[DEBUG]<Redis>(buyProduct): {CACHE} Purchases of Customer with ID = " +
+                customer.customerId()  + " - " + jedis.lrange(key, 0, -1));
     }
 
     @Override
@@ -76,31 +90,42 @@ public class RedisCacheShop implements Shop {
         String productId = String.valueOf(product.productId());
 
         if (jedis.lpos(key, productId) == null) {
-            System.out.println("CACHE MISS(hasBought): Did not find " + product +
-                    " for " + customer);
-            return h2Shop.hasBought(customer, product);
+            System.out.print("[DEBUG]<Redis>(hasBought): {CACHE MISS} Did not find productId = " +
+                    product.productId() + " for Customer with ID = " + customer.customerId() + " ");
+
+            boolean hasBought = h2Shop.hasBought(customer, product);
+
+            if (hasBought) {
+                System.out.println("(Found the Order in the H2 DB)");
+            } else {
+                System.out.println("(Did not find the Order in the H2 DB)");
+            }
+
+            return hasBought;
         }
 
-        System.out.println("CACHE HIT(hasBought): Found " + product +
-                " for " + customer);
+        System.out.println("[DEBUG]<Redis>(hasBought): {CACHE HIT} Found productId = " +
+        product.productId() + " for Customer with ID = " + customer.customerId() + " ");
         return true;
     }
 
     @Override
     public Product getProduct(int productId) {
         String key = getProductKey(productId);
-
         String productJson = jedis.get(key);
 
         if (productJson != null) {
-            System.out.println("CACHE HIT(getProduct): Found " + productId);
+            System.out.println("[DEBUG]<Redis>(getProduct): {CACHE HIT} Found productId = " + productId);
             return gson.fromJson(productJson, Product.class);
         }
 
-        System.out.println("CACHE MISS(getProduct): Did not find " + productId);
+        System.out.print("[DEBUG]<Redis>(getProduct): {CACHE MISS} Did not find productId = " + productId + " ");
         Product foundProduct = h2Shop.getProduct(productId);
         if (foundProduct != null) {
+            System.out.println("(Found in the H2 DB - Added to the cache!)");
             jedis.set(key, gson.toJson(foundProduct));
+        } else {
+            System.out.println("(Did not find in the H2 DB)");
         }
 
         return foundProduct;
