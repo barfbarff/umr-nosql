@@ -1,6 +1,7 @@
 package de.umr.nosql.redis.shop;
 
 import de.umr.nosql.redis.model.Customer;
+import de.umr.nosql.redis.model.Order;
 import de.umr.nosql.redis.model.Product;
 import org.h2.jdbcx.JdbcConnectionPool;
 import org.h2.tools.DeleteDbFiles;
@@ -11,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 public class H2Shop implements Shop, AutoCloseable {
 
@@ -124,13 +126,12 @@ public class H2Shop implements Shop, AutoCloseable {
 
                     return newProduct;
                 } else {
-                    throw new SQLException("[ERROR]<H2>(registerCustomer): " +
-                            "Failed to insert Product " + productName);
+                    throw new SQLException("Failed to insert Product " + productName);
                 }
             }
 
         } catch(SQLException e) {
-            System.err.println(e.getMessage());
+            System.err.println("[ERROR]<H2>(addProductToShop): " + e.getMessage());
             return null;
         }
     }
@@ -150,8 +151,7 @@ public class H2Shop implements Shop, AutoCloseable {
             int affectedRows = insertStmt.executeUpdate();
 
             if  (affectedRows == 0) {
-                throw new SQLException("[ERROR]<H2>(registerCustomer): " +
-                        "Failed to insert customer " + userName);
+                throw new SQLException("Failed to insert customer " + userName);
             }
 
             try (ResultSet generatedKeys = insertStmt.getGeneratedKeys()) {
@@ -160,23 +160,23 @@ public class H2Shop implements Shop, AutoCloseable {
 
                     Customer newCustomer = new  Customer(newId, userName);
 
-                    System.out.println("[DEBUG]<H2>(registerCustomer): Added " + newCustomer);
+                    System.out.println("[DEBUG]<H2>(registerCustomer): Added " + newCustomer +
+                            " to the H2 DB");
 
                     return newCustomer;
                 } else {
-                    throw new SQLException("[ERROR]<H2>(registerCustomer): " +
-                            "Failed to insert customer " + userName);
+                    throw new SQLException("Failed to insert customer " + userName);
                 }
             }
 
         } catch(SQLException e) {
-            System.err.println(e.getMessage());
+            System.err.println("[ERROR]<H2>(registerCustomer): " + e.getMessage());
             return null;
         }
     }
 
     @Override
-    public void buyProduct(Customer customer, Product product) {
+    public Order buyProduct(Customer customer, Product product) {
         String insertOrderSql = "INSERT INTO orders (shipping_address) VALUES (?)";
 
         String insertCustomerOrderSql = """
@@ -229,14 +229,22 @@ public class H2Shop implements Shop, AutoCloseable {
 
                 connection.commit();
 
-                System.out.println("[INFO]<H2>(buyProduct): Transaction was successful!");
+                System.out.println("[DEBUG]<H2>(buyProduct): Transaction was successful! " +
+                        "The Order ID is: " + newOrderId);
+
+                return new Order(
+                    newOrderId,
+                    customer.address(),
+                    List.of(product)
+                );
 
             } catch (SQLException e) {
-                System.out.println("[ERROR]<H2>(buyProduct): " + e.getMessage());
                 connection.rollback();
+                throw e;
             }
         } catch(SQLException e) {
             System.out.println("[ERROR]<H2>(buyProduct): " + e.getMessage());
+            return null;
         }
     }
 
@@ -261,7 +269,7 @@ public class H2Shop implements Shop, AutoCloseable {
             }
 
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
+            System.err.println("[ERROR]<H2>(hasBought): " + e.getMessage());
             return false;
         }
     }
@@ -285,13 +293,13 @@ public class H2Shop implements Shop, AutoCloseable {
                 }
             }
         } catch (SQLException e) {
-            System.err.println(e.getMessage());
+            System.err.println("[ERROR]<H2>(getProduct): " + e.getMessage());
             return null;
         }
     }
 
     @Override
     public void close() {
-        ((JdbcConnectionPool)dataSource).dispose();
+        ((JdbcConnectionPool) dataSource).dispose();
     }
 }

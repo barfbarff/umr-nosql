@@ -2,6 +2,7 @@ package de.umr.nosql.redis.shop;
 
 import com.google.gson.Gson;
 import de.umr.nosql.redis.model.Customer;
+import de.umr.nosql.redis.model.Order;
 import de.umr.nosql.redis.model.Product;
 import redis.clients.jedis.Jedis;
 
@@ -46,7 +47,8 @@ public class RedisCacheShop implements Shop {
            String key = getProductKey(newProduct.productId());
            String newProductJson = gson.toJson(newProduct);
            jedis.set(key, newProductJson);
-           System.out.println("[DEBUG]<Redis>(addProductToShop): Added " + newProduct + " to the cache");
+           System.out.println("[DEBUG]<Redis>(addProductToShop): Added " + newProduct +
+                   " to the cache");
        }
 
        return newProduct;
@@ -58,10 +60,10 @@ public class RedisCacheShop implements Shop {
     }
 
     @Override
-    public void buyProduct(Customer customer, Product product) {
+    public Order buyProduct(Customer customer, Product product) {
         System.out.println("~".repeat(35) + " TRANSACTION (RedisCache) " + "~".repeat(35));
-        System.out.println("[DEBUG]<Redis>(Input): " + customer);
-        System.out.println("[DEBUG]<Redis>(Input): " + product);
+        System.out.println("[DEBUG]<Redis>(buyProduct): " + customer);
+        System.out.println("[DEBUG]<Redis>(buyProduct): " + product);
 
         if (getProduct(product.productId()) == null) {
             System.out.println("[INFO]<Redis>(buyProduct): Transaction was cancelled as " +
@@ -69,19 +71,22 @@ public class RedisCacheShop implements Shop {
 
             System.out.println("[DEBUG]<Redis>(buyProduct): The product does not exist in the H2 DB. " +
                     "Skip caching this product");
-            return;
+
+            return null;
         }
 
-        h2Shop.buyProduct(customer, product);
-
+        Order order = h2Shop.buyProduct(customer, product);
 
         String key = getCustomerPurchasesKey(customer.customerId());
         String productId = String.valueOf(product.productId());
 
         jedis.lpush(key, productId);
         jedis.ltrim(key, 0, 4);
+
         System.out.println("[DEBUG]<Redis>(buyProduct): {CACHE} Purchases of Customer with ID = " +
                 customer.customerId()  + " - " + jedis.lrange(key, 0, -1));
+
+        return order;
     }
 
     @Override
@@ -105,7 +110,8 @@ public class RedisCacheShop implements Shop {
         }
 
         System.out.println("[DEBUG]<Redis>(hasBought): {CACHE HIT} Found productId = " +
-        product.productId() + " for Customer with ID = " + customer.customerId() + " ");
+                product.productId() + " for Customer with ID = " + customer.customerId() + " ");
+
         return true;
     }
 
@@ -115,15 +121,20 @@ public class RedisCacheShop implements Shop {
         String productJson = jedis.get(key);
 
         if (productJson != null) {
-            System.out.println("[DEBUG]<Redis>(getProduct): {CACHE HIT} Found productId = " + productId);
+            System.out.println("[DEBUG]<Redis>(getProduct): {CACHE HIT} Found productId = " +
+                    productId);
+
             return gson.fromJson(productJson, Product.class);
         }
 
-        System.out.print("[DEBUG]<Redis>(getProduct): {CACHE MISS} Did not find productId = " + productId + " ");
+        System.out.print("[DEBUG]<Redis>(getProduct): {CACHE MISS} Did not find productId = " +
+                productId + " ");
+
         Product foundProduct = h2Shop.getProduct(productId);
+
         if (foundProduct != null) {
-            System.out.println("(Found in the H2 DB - Added to the cache!)");
             jedis.set(key, gson.toJson(foundProduct));
+            System.out.println("(Found in the H2 DB - Added to the cache!)");
         } else {
             System.out.println("(Did not find in the H2 DB)");
         }

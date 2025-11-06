@@ -1,6 +1,7 @@
 package de.umr.nosql.redis.shop;
 
 import de.umr.nosql.redis.model.Customer;
+import de.umr.nosql.redis.model.Order;
 import de.umr.nosql.redis.model.Product;
 
 public interface Shop extends AutoCloseable {
@@ -23,7 +24,7 @@ public interface Shop extends AutoCloseable {
      * @param customer The customer who bought something
      * @param product The product he bought
      */
-    void buyProduct(Customer customer, Product product);
+    Order buyProduct(Customer customer, Product product);
 
     /**
      * Checks whether the customer has bought the given product

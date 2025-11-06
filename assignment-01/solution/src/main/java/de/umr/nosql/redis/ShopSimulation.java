@@ -1,6 +1,7 @@
 package de.umr.nosql.redis;
 
 import de.umr.nosql.redis.model.Customer;
+import de.umr.nosql.redis.model.Order;
 import de.umr.nosql.redis.model.Product;
 import de.umr.nosql.redis.shop.H2Shop;
 import de.umr.nosql.redis.shop.RedisCacheShop;
@@ -79,7 +80,12 @@ public class ShopSimulation {
             List<Product> clarkShoppingList = Arrays.asList(
                     apple, orange, apple, espresso, latte, cappuccino, bread, latte
             );
-            clarkShoppingList.forEach(product -> redisCacheShop.buyProduct(clark, product));
+            clarkShoppingList.forEach(product -> {
+                Order order = redisCacheShop.buyProduct(clark, product);
+                clark.addOrder(order);
+            });
+            System.out.println("\n[DEBUG]<Sim>: " + clark.getSimplifiedOrders());
+
 
             System.out.println("\n[RUN]<Sim>: Check if Clark hasBought Orange");
             System.out.println("[INFO]<Sim>: Answer - " + redisCacheShop.hasBought(clark, orange));
@@ -94,11 +100,16 @@ public class ShopSimulation {
             System.out.println("[INFO]<Sim>: Answer - " + redisCacheShop.hasBought(clark, bread));
 
             System.out.println("\n[SETUP]<Sim>: Customer Lily buys " +
-                    "[apple, orange, apple, espresso, latte, cappuccino]");
+                    "[orange, bread, cappuccino, latte, apple, banana, banana]");
             List<Product> lilyShoppingList = Arrays.asList(
                     orange, bread, cappuccino, latte, apple, banana, banana
             );
-            lilyShoppingList.forEach(product -> redisCacheShop.buyProduct(lily, product));
+            lilyShoppingList.forEach(product -> {
+                Order order = redisCacheShop.buyProduct(lily, product);
+                lily.addOrder(order);
+            });
+            System.out.println("\n[DEBUG]<Sim>: " + lily.getSimplifiedOrders());
+
 
             System.out.println("\n[RUN]<Sim>: Check if Lily hasBought Orange");
             System.out.println("[INFO]<Sim>: Answer - " + redisCacheShop.hasBought(lily, orange));
