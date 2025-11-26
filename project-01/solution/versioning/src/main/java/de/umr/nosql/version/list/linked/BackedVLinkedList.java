@@ -3,63 +3,61 @@ package de.umr.nosql.version.list.linked;
 import de.umr.nosql.version.list.base.serializer.Serializer;
 import de.umr.nosql.version.list.base.storage.KVStore;
 import de.umr.nosql.version.list.base.storage.VersionList;
+import de.umr.nosql.version.util.KVStoreHelper;
 import lombok.Builder;
-import tools.jackson.databind.ObjectMapper;
 
 public class BackedVLinkedList<P> implements VersionList<P> {
 
     @Builder
-    private record Node(String serializedPayload, long timestamp, long nextVersionNum) {}
+    private record Node(String serializedPayload, long nextVersionNum) {}
 
     private final Serializer<P> payloadSerializer;
 
-    private final KVStore kvStore;
-
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final KVStoreHelper<Long, Node> kvStoreHelper;
 
     private long lastVersionNum = 0;
 
     public BackedVLinkedList(Serializer<P> payloadSerializer, KVStore kvStore) {
         this.payloadSerializer = payloadSerializer;
-        this.kvStore = kvStore;
+        this.kvStoreHelper = new KVStoreHelper<>(kvStore, Node.class);
     }
 
     @Override
     public void append(P p, long timestamp) {
-        long newVersionNum = lastVersionNum + 1;
-
         String serializedPayload = payloadSerializer.serialize(p);
 
         Node newNode = Node.builder()
                 .serializedPayload(serializedPayload)
-                .timestamp(timestamp)
                 .nextVersionNum(lastVersionNum)
                 .build();
 
-        String serializedNode = objectMapper.writeValueAsString(newNode);
+        kvStoreHelper.putObjectIntoKVStore(timestamp, newNode);
 
-        kvStore.put(String.valueOf(newVersionNum), serializedNode);
-
-        lastVersionNum = newVersionNum;
+        lastVersionNum = timestamp;
     }
 
     @Override
     public P findVisible(long timestamp) {
-        if (lastVersionNum == 0) {
+        if (timestamp <= 0 || lastVersionNum == 0) {
             return null;
         }
 
-        String serializedNode = kvStore.get(String.valueOf(lastVersionNum));
+        long tmpKey = lastVersionNum;
 
-        while (serializedNode != null) {
-            Node node = objectMapper.readValue(serializedNode, Node.class);
+        Node vTmp = kvStoreHelper.getValueByKey(tmpKey);
 
-            if (node.timestamp() <= timestamp) {
-                String serializedPayload = node.serializedPayload();
-                return payloadSerializer.deSerialize(serializedPayload);
-            }
+        if (lastVersionNum <= timestamp) {
+            return payloadSerializer.deSerialize(vTmp.serializedPayload());
+        }
 
-            serializedNode = kvStore.get(String.valueOf(node.nextVersionNum()));
+        while (tmpKey > 0 && tmpKey > timestamp) {
+            vTmp = kvStoreHelper.getValueByKey(tmpKey);
+            tmpKey = vTmp.nextVersionNum();
+        }
+
+        if (tmpKey > 0) {
+            vTmp = kvStoreHelper.getValueByKey(tmpKey);
+            return payloadSerializer.deSerialize(vTmp.serializedPayload());
         }
 
         return null;

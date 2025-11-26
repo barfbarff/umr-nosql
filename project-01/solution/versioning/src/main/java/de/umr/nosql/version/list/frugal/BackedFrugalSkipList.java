@@ -3,15 +3,14 @@ package de.umr.nosql.version.list.frugal;
 import de.umr.nosql.version.list.base.serializer.Serializer;
 import de.umr.nosql.version.list.base.storage.KVStore;
 import de.umr.nosql.version.list.base.storage.VersionList;
+import de.umr.nosql.version.util.KVStoreHelper;
 import lombok.Builder;
-import tools.jackson.databind.ObjectMapper;
 
 public class BackedFrugalSkipList<P> implements VersionList<P> {
 
     @Builder
     private record Node(
             String serializedPayload,
-            long timestamp,
             int level,
             long nextKey,
             long ridgyKey
@@ -19,80 +18,82 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
 
     private final Serializer<P> payloadSerializer;
 
-    private final KVStore kvStore;
-
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final KVStoreHelper<Long, Node> kvStoreHelper;
 
     private long lastVersionNum = 0;
 
     public BackedFrugalSkipList(Serializer<P> payloadSerializer, KVStore kvStore) {
         this.payloadSerializer = payloadSerializer;
-        this.kvStore = kvStore;
+        this.kvStoreHelper = new KVStoreHelper<>(kvStore, Node.class);
     }
 
     @Override
     public void append(P p, long timestamp) {
-        long newVersionNum = lastVersionNum + 1;
-
         String serializedPayload = payloadSerializer.serialize(p);
 
         if (lastVersionNum == 0) {
-            initStack(newVersionNum, serializedPayload, timestamp);
-            lastVersionNum = newVersionNum;
+            initStack(timestamp, serializedPayload);
+            lastVersionNum = timestamp;
             return;
         }
 
         CoinFace coinFace = CoinFace.toss();
 
         if (coinFace == CoinFace.HEAD) {
-            putOnTopVersionStack(newVersionNum, serializedPayload, timestamp);
+            putOnTopVersionStack(timestamp, serializedPayload);
         } else if (coinFace == CoinFace.TAIL) {
-            createNewVersionStack(newVersionNum, serializedPayload, timestamp);
+            createNewVersionStack(timestamp, serializedPayload);
         }
 
-        lastVersionNum = newVersionNum;
+        lastVersionNum = timestamp;
     }
 
     @Override
     public P findVisible(long timestamp) {
-        // Temporary node for traversing the Frugal Skip List
-        Node vTmp = getNodeByKey(lastVersionNum);
+        if (timestamp <= 0 || lastVersionNum == 0) {
+            return null;
+        }
 
-        while (vTmp != null && vTmp.timestamp() > timestamp) {
-            Node vRidgy = getNodeByKey(vTmp.ridgyKey());
+        long tmpKey = lastVersionNum;
 
-            if (vRidgy != null && vRidgy.timestamp() > timestamp) {
-                vTmp = vRidgy;
+        Node vTmp = kvStoreHelper.getValueByKey(tmpKey);
+
+        if (tmpKey <= timestamp) {
+            return payloadSerializer.deSerialize(vTmp.serializedPayload());
+        }
+
+        while (tmpKey > 0 && tmpKey > timestamp) {
+            vTmp = kvStoreHelper.getValueByKey(tmpKey);
+
+            if (vTmp.ridgyKey() > timestamp) {
+                tmpKey = vTmp.ridgyKey();
             } else {
-                vTmp = getNodeByKey(vTmp.nextKey());
+                tmpKey = vTmp.nextKey();
             }
         }
 
-        if (vTmp != null) {
-            String serializedPayload = vTmp.serializedPayload();
-            return payloadSerializer.deSerialize(serializedPayload);
+        if (tmpKey > 0) {
+            vTmp = kvStoreHelper.getValueByKey(tmpKey);
+            return payloadSerializer.deSerialize(vTmp.serializedPayload());
         }
 
         return null;
     }
 
-    private void initStack(long newVersionNum,
-                           String serializedPayload,
-                           long timestamp) {
+    private void initStack(long timestamp,
+                           String serializedPayload) {
         Node vNew = Node.builder()
                 .serializedPayload(serializedPayload)
-                .timestamp(timestamp)
                 .level(0)
                 .build();
 
-        putNodeIntoKVStore(newVersionNum, vNew);
+        kvStoreHelper.putObjectIntoKVStore(timestamp, vNew);
     }
 
-    private void putOnTopVersionStack(long newVersionNum,
-                                      String serializedPayload,
-                                      long timestamp) {
+    private void putOnTopVersionStack(long timestamp,
+                                      String serializedPayload) {
         // Get the vBase node from kvStore using the lastVersionNum key
-        Node vBase = getNodeByKey(lastVersionNum);
+        Node vBase = kvStoreHelper.getValueByKey(lastVersionNum);
 
         // Level of the new vNew node
         int vNewLevel = vBase.level() + 1;
@@ -103,7 +104,7 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
         // Search for a ridgy processor by traversing ridgy links
         while (tmpKey > 0) {
             // Get the vTmp node from kvStore using the tmpKey key
-            Node vTmp = getNodeByKey(tmpKey);
+            Node vTmp = kvStoreHelper.getValueByKey(tmpKey);
 
             if (vTmp.level() >= vNewLevel) {
                 break;
@@ -115,53 +116,23 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
         // Create new vNew node for the new version
         Node vNew = Node.builder()
                 .serializedPayload(serializedPayload)
-                .timestamp(timestamp)
                 .level(vNewLevel)
                 .nextKey(lastVersionNum)
                 .ridgyKey(tmpKey)
                 .build();
 
-        putNodeIntoKVStore(newVersionNum, vNew);
+        kvStoreHelper.putObjectIntoKVStore(timestamp, vNew);
     }
 
-    private void createNewVersionStack(long newVersionNum,
-                                       String serializedPayload,
-                                       long timestamp) {
+    private void createNewVersionStack(long timestamp,
+                                       String serializedPayload) {
         Node vNew = Node.builder()
                 .serializedPayload(serializedPayload)
-                .timestamp(timestamp)
                 .level(0)
                 .nextKey(lastVersionNum)
                 .ridgyKey(lastVersionNum)
                 .build();
 
-        putNodeIntoKVStore(newVersionNum, vNew);
-    }
-
-    private Node getNodeByKey(long key) {
-        if (key == 0) {
-            return null;
-        }
-
-        if (key < 0 || key > lastVersionNum) {
-            throw new IllegalArgumentException("Invalid key request: " + key +
-                    ". Valid keys should be integers from 0 to " + lastVersionNum);
-        }
-
-        // Get serialized string of node from kvStore
-        String serializedNode = kvStore.get(String.valueOf(key));
-
-        if (serializedNode == null) {
-            throw new IllegalStateException("Data Corruption: Version " + key +
-                    " is missing from KVStore");
-        }
-
-        // Deserialize the string into node
-        return objectMapper.readValue(serializedNode, Node.class);
-    }
-
-    private void putNodeIntoKVStore(long newVersionNum, Node node) {
-        String serializedNode = objectMapper.writeValueAsString(node);
-        kvStore.put(String.valueOf(newVersionNum), serializedNode);
+        kvStoreHelper.putObjectIntoKVStore(timestamp, vNew);
     }
 }
