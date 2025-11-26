@@ -1,6 +1,6 @@
-package de.umr.nosql.versioning.list.frugal;
+package de.umr.nosql.version.list.frugal;
 
-import de.umr.nosql.versioning.list.base.storage.VersionList;
+import de.umr.nosql.version.list.base.storage.VersionList;
 import lombok.Builder;
 
 public class FrugalSkipList<P> implements VersionList<P> {

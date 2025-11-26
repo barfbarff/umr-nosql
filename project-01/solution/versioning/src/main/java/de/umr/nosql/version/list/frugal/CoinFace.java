@@ -1,4 +1,4 @@
-package de.umr.nosql.versioning.list.frugal;
+package de.umr.nosql.version.list.frugal;
 
 import java.util.Random;
 

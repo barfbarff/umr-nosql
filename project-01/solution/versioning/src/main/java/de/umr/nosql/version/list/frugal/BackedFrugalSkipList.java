@@ -1,8 +1,8 @@
-package de.umr.nosql.versioning.list.frugal;
+package de.umr.nosql.version.list.frugal;
 
-import de.umr.nosql.versioning.list.base.serializer.Serializer;
-import de.umr.nosql.versioning.list.base.storage.KVStore;
-import de.umr.nosql.versioning.list.base.storage.VersionList;
+import de.umr.nosql.version.list.base.serializer.Serializer;
+import de.umr.nosql.version.list.base.storage.KVStore;
+import de.umr.nosql.version.list.base.storage.VersionList;
 import lombok.Builder;
 import tools.jackson.databind.ObjectMapper;
 
@@ -13,8 +13,8 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
             String serializedPayload,
             long timestamp,
             int level,
-            int nextKey,
-            int ridgyKey
+            long nextKey,
+            long ridgyKey
     ) {}
 
     private final Serializer<P> payloadSerializer;
@@ -23,7 +23,7 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private int lastVersionNum = 0;
+    private long lastVersionNum = 0;
 
     public BackedFrugalSkipList(Serializer<P> payloadSerializer, KVStore kvStore) {
         this.payloadSerializer = payloadSerializer;
@@ -32,7 +32,7 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
 
     @Override
     public void append(P p, long timestamp) {
-        int newVersionNum = lastVersionNum + 1;
+        long newVersionNum = lastVersionNum + 1;
 
         String serializedPayload = payloadSerializer.serialize(p);
 
@@ -76,7 +76,7 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
         return null;
     }
 
-    private void initStack(int newVersionNum,
+    private void initStack(long newVersionNum,
                            String serializedPayload,
                            long timestamp) {
         Node vNew = Node.builder()
@@ -88,7 +88,7 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
         putNodeIntoKVStore(newVersionNum, vNew);
     }
 
-    private void putOnTopVersionStack(int newVersionNum,
+    private void putOnTopVersionStack(long newVersionNum,
                                       String serializedPayload,
                                       long timestamp) {
         // Get the vBase node from kvStore using the lastVersionNum key
@@ -98,7 +98,7 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
         int vNewLevel = vBase.level() + 1;
 
         // Temporary key for traversing the kvStore map
-        int tmpKey = lastVersionNum;
+        long tmpKey = lastVersionNum;
 
         // Search for a ridgy processor by traversing ridgy links
         while (tmpKey > 0) {
@@ -124,7 +124,7 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
         putNodeIntoKVStore(newVersionNum, vNew);
     }
 
-    private void createNewVersionStack(int newVersionNum,
+    private void createNewVersionStack(long newVersionNum,
                                        String serializedPayload,
                                        long timestamp) {
         Node vNew = Node.builder()
@@ -138,7 +138,7 @@ public class BackedFrugalSkipList<P> implements VersionList<P> {
         putNodeIntoKVStore(newVersionNum, vNew);
     }
 
-    private Node getNodeByKey(int key) {
+    private Node getNodeByKey(long key) {
         if (key == 0) {
             return null;
         }

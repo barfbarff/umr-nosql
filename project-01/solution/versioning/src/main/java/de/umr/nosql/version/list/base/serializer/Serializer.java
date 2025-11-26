@@ -1,4 +1,4 @@
-package de.umr.nosql.versioning.list.base.serializer;
+package de.umr.nosql.version.list.base.serializer;
 
 public interface Serializer<T> {
 

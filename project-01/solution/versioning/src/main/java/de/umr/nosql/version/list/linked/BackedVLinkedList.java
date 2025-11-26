@@ -1,8 +1,8 @@
-package de.umr.nosql.versioning.list.linked;
+package de.umr.nosql.version.list.linked;
 
-import de.umr.nosql.versioning.list.base.serializer.Serializer;
-import de.umr.nosql.versioning.list.base.storage.KVStore;
-import de.umr.nosql.versioning.list.base.storage.VersionList;
+import de.umr.nosql.version.list.base.serializer.Serializer;
+import de.umr.nosql.version.list.base.storage.KVStore;
+import de.umr.nosql.version.list.base.storage.VersionList;
 import lombok.Builder;
 import tools.jackson.databind.ObjectMapper;
 
@@ -17,7 +17,7 @@ public class BackedVLinkedList<P> implements VersionList<P> {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private int lastVersionNum = 0;
+    private long lastVersionNum = 0;
 
     public BackedVLinkedList(Serializer<P> payloadSerializer, KVStore kvStore) {
         this.payloadSerializer = payloadSerializer;
@@ -26,7 +26,7 @@ public class BackedVLinkedList<P> implements VersionList<P> {
 
     @Override
     public void append(P p, long timestamp) {
-        int newVersionNum = lastVersionNum + 1;
+        long newVersionNum = lastVersionNum + 1;
 
         String serializedPayload = payloadSerializer.serialize(p);
 

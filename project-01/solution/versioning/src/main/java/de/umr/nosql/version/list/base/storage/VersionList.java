@@ -1,4 +1,4 @@
-package de.umr.nosql.versioning.list.base.storage;
+package de.umr.nosql.version.list.base.storage;
 
 public interface VersionList<P> {
     /**

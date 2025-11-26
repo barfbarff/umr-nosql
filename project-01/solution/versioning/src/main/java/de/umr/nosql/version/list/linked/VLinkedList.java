@@ -1,6 +1,6 @@
-package de.umr.nosql.versioning.list.linked;
+package de.umr.nosql.version.list.linked;
 
-import de.umr.nosql.versioning.list.base.storage.VersionList;
+import de.umr.nosql.version.list.base.storage.VersionList;
 
 public class VLinkedList<P> implements VersionList<P> {
 
