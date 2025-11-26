@@ -17,7 +17,7 @@ public class BackedVLinkedList<P> implements VersionList<P> {
 
     private long lastVersionNum = 0;
 
-    public BackedVLinkedList(Serializer<P> payloadSerializer, KVStore kvStore) {
+    public BackedVLinkedList(KVStore kvStore, Serializer<P> payloadSerializer) {
         this.payloadSerializer = payloadSerializer;
         this.kvStoreHelper = new KVStoreHelper<>(kvStore, Node.class);
     }
