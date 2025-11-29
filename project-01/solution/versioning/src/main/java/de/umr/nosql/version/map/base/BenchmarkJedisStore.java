@@ -42,6 +42,9 @@ public class BenchmarkJedisStore implements FlushableKVStore{
     @Override
     public void flushDB() {
         this.jedis.flushAll();
+        this.putRequestNum = 0;
+        this.writeBuffer.clear();
+        this.cacheForSkipList.clear();
     }
 
     @Override
@@ -83,9 +86,7 @@ public class BenchmarkJedisStore implements FlushableKVStore{
             return cacheForSkipList.get(storeKey);
         }
 
-        // In case that mostRecentCache does not contain the requested storeKey key
-        // then this means that it has already been inserted into Redis
-        return jedis.get(storeKey);
+        return null;
     }
 
     @Override

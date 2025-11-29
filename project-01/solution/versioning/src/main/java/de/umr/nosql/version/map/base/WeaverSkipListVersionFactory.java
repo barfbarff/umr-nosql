@@ -1,0 +1,13 @@
+package de.umr.nosql.version.map.base;
+
+import de.umr.nosql.version.list.base.serializer.Serializer;
+import de.umr.nosql.version.list.base.storage.KVStore;
+import de.umr.nosql.version.list.frugal.BackedWeaverFrugalSkipList;
+
+public class WeaverSkipListVersionFactory<P> implements VersionListFactory<P>{
+
+    @Override
+    public BackedWeaverFrugalSkipList<P> create(KVStore store, Serializer<P> serializer) {
+        return new BackedWeaverFrugalSkipList<>(store, serializer);
+    }
+}

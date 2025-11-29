@@ -59,52 +59,52 @@ public class Test {
                               of the task.
 
         ~~~ BackedVLinkedList with BenchmarkJedisStore ~~~
-        Elapsed time of iteration 0 (in seconds): 4.739177300000001s
-        (+) Insertion time: 4.7378501s
-        (+) Query time: 0.0013272s
-        Elapsed time of iteration 1 (in seconds): 3.683895s
-        (+) Insertion time: 3.6837894s
-        (+) Query time: 1.056E-4s
-        Elapsed time of iteration 2 (in seconds): 3.5809002999999997s
-        (+) Insertion time: 3.580837s
-        (+) Query time: 6.33E-5s
-        Average Elapsed Time (in seconds): 4.0013242s
+        Elapsed time of iteration 0
+        (+) Insertion time: 4.4245993s
+        (+) Query time: 2236.696251s
+        Elapsed time of iteration 1
+        (+) Insertion time: 4.7296271s
+        (+) Query time: 1918.1507774s
+        Elapsed time of iteration 2
+        (+) Insertion time: 3.3014399s
+        (+) Query time: 1818.6840688s
+        Average Elapsed Time (in seconds): 1995.3289211666668s
 
         ~~~ BackedFrugalSkipList with BenchmarkJedisStore ~~~
-        Elapsed time of iteration 0 (in seconds): 6.2811196s
-        (+) Insertion time: 6.2810556s
-        (+) Query time: 6.4E-5s
-        Elapsed time of iteration 1 (in seconds): 5.7125164s
-        (+) Insertion time: 5.7124616s
-        (+) Query time: 5.48E-5s
-        Elapsed time of iteration 2 (in seconds): 5.544826100000001s
-        (+) Insertion time: 5.5447547s
-        (+) Query time: 7.14E-5s
-        Average Elapsed Time (in seconds): 5.846154033333334s
+        Elapsed time of iteration 0
+        (+) Insertion time: 7.841744s
+        (+) Query time: 65.5084027s
+        Elapsed time of iteration 1
+        (+) Insertion time: 5.7993283s
+        (+) Query time: 60.5550804s
+        Elapsed time of iteration 2
+        (+) Insertion time: 6.1995452s
+        (+) Query time: 71.7338426s
+        Average Elapsed Time (in seconds): 72.54598106666667s
 
         ~~~ BackedVLinkedList with SimpleJedisStore ~~~
-        Elapsed time of iteration 0 (in seconds): 276.7862449s
-        (+) Insertion time: 276.7861541s
-        (+) Query time: 9.08E-5s
-        Elapsed time of iteration 1 (in seconds): 259.98836750000004s
-        (+) Insertion time: 259.988282s
-        (+) Query time: 8.55E-5s
-        Elapsed time of iteration 2 (in seconds): 274.225065s
-        (+) Insertion time: 274.2250003s
-        (+) Query time: 6.47E-5s
-        Average Elapsed Time (in seconds): 270.3332258s
+        Elapsed time of iteration 0
+        (+) Insertion time: 4.4245993s
+        (+) Query time: 2236.696251s
+        Elapsed time of iteration 1
+        (+) Insertion time: 4.7296271s
+        (+) Query time: 1918.1507774s
+        Elapsed time of iteration 2
+        (+) Insertion time: 3.3014399s
+        (+) Query time: 1818.6840688s
+        Average Elapsed Time (in seconds): 1995.3289211666668s
 
         ~~~ BackedFrugalSkipList with SimpleJedisStore ~~~
-        Elapsed time of iteration 0 (in seconds): 767.8726054s
-        (+) Insertion time: 767.8724951s
-        (+) Query time: 1.103E-4s
-        Elapsed time of iteration 1 (in seconds): 772.6001374s
-        (+) Insertion time: 772.600005s
-        (+) Query time: 1.324E-4s
-        Elapsed time of iteration 2 (in seconds): 776.2818867999999s
-        (+) Insertion time: 776.2818163s
-        (+) Query time: 7.05E-5s
-        Average Elapsed Time (in seconds): 772.2515432s
+        Elapsed time of iteration 0
+        (+) Insertion time: 720.4385722s
+        (+) Query time: 52.9167474s
+        Elapsed time of iteration 1
+        (+) Insertion time: 742.4483342s
+        (+) Query time: 56.5860212s
+        Elapsed time of iteration 2
+        (+) Insertion time: 754.9374085s
+        (+) Query time: 52.3944929s
+        Average Elapsed Time (in seconds): 793.2405254666666s
          */
 
         InputStream testDataStream = Test.class.getResourceAsStream("/test_data.csv");
@@ -116,7 +116,7 @@ public class Test {
 
             List<Map.Entry<String, Payload>> benchmarkData = readData(benchmarkDataStream);
             testPartCWithBenchmarkJedis(benchmarkData);
-            testPartCWithSimpleJedis(benchmarkData);
+//            testPartCWithSimpleJedis(benchmarkData);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -150,16 +150,16 @@ public class Test {
         try (SimpleJedisStore simpleJedisStore = new SimpleJedisStore()) {
             System.out.println("+".repeat(40) + " TASK 1.3 (PART B) " + "+".repeat(40));
 
+            System.out.println("~".repeat(35) + " BackedFrugalSkipList " + "~".repeat(35));
+            SkipListVersionFactory<Payload> skipListVersionFactory = new SkipListVersionFactory<>();
+            runTestPartB(data, skipListVersionFactory, simpleJedisStore);
+
+            System.out.println();
+
             System.out.println("~".repeat(35) + " BackedVLinkedList " + "~".repeat(35));
             LinkedListVersionFactory<Payload> linkedListVersionFactory =
                     new LinkedListVersionFactory<>();
             runTestPartB(data, linkedListVersionFactory, simpleJedisStore);
-
-            System.out.println();
-
-            System.out.println("~".repeat(35) + " BackedFrugalSkipList " + "~".repeat(35));
-            SkipListVersionFactory<Payload> skipListVersionFactory = new SkipListVersionFactory<>();
-            runTestPartB(data, skipListVersionFactory, simpleJedisStore);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -215,30 +215,34 @@ public class Test {
 
         System.out.println("+".repeat(40) + " TASK 1.3 (PART C) " + "+".repeat(40));
 
-        System.out.println("~".repeat(35) + " BackedVLinkedList with " + kvStoreUsed +
-                " ~".repeat(35));
+        System.out.println("~".repeat(35) + " BackedFrugalSkipList with " + kvStoreUsed + " " +
+                "~".repeat(35));
+        SkipListVersionFactory<Payload> skipListVersionFactory = new SkipListVersionFactory<>();
+        runTestPartC(data, skipListVersionFactory, kvStore, 3);
+
+        System.out.println();
+
+        System.out.println("~".repeat(35) + " BackedVLinkedList with " + kvStoreUsed + " " +
+                "~".repeat(35));
         LinkedListVersionFactory<Payload> linkedListVersionFactory =
                 new LinkedListVersionFactory<>();
         runTestPartC(data, linkedListVersionFactory, kvStore, 3);
 
-        System.out.println();
 
-        System.out.println("~".repeat(35) + " BackedFrugalSkipList with " + kvStoreUsed +
-                " ~".repeat(35));
-        SkipListVersionFactory<Payload> skipListVersionFactory = new SkipListVersionFactory<>();
-        runTestPartC(data, skipListVersionFactory, kvStore, 3);
     }
 
     private static void runTestPartC(List<Map.Entry<String, Payload>> data,
                                      VersionListFactory<Payload> versionListFactory,
                                      FlushableKVStore kvStore,
                                      int iterations) {
-        kvStore.flushDB();
-
         int[] testTimestamps = new int[] {10, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000};
         double[] elapsedTimes = new double[iterations];
 
         for (int i = 0; i < iterations; i++) {
+            kvStore.flushDB();
+
+            System.out.println("Elapsed time of iteration " + i);
+
             MultiVersionMap<String, Payload> multiVersionMap = new BackedSimpleMVM<>(
                     versionListFactory,
                     Payload.class,
@@ -257,10 +261,16 @@ public class Test {
             long endInsertionTime = System.nanoTime();
             double insertionTime = (endInsertionTime - startInsertionTime)/ 1_000_000_000.0;
 
+            System.out.println("(+) Insertion time: " + insertionTime + "s");
+
             long startQueryTime  = System.nanoTime();
 
             for (int testTimestamp : testTimestamps) {
-                multiVersionMap.snapshot(testTimestamp);
+                var it = multiVersionMap.snapshot(testTimestamp);
+
+                while(it.hasNext()) {
+                    it.next();
+                }
             }
 
             long endQueryTime = System.nanoTime();
@@ -268,9 +278,6 @@ public class Test {
 
             elapsedTimes[i] = insertionTime + queryTime;
 
-            System.out.println("Elapsed time of iteration " + i + " (in seconds): " +
-                    elapsedTimes[i] + "s");
-            System.out.println("(+) Insertion time: " + insertionTime + "s");
             System.out.println("(+) Query time: " + queryTime + "s");
         }
 

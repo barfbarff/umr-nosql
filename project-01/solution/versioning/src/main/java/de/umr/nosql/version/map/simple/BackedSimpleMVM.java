@@ -27,7 +27,6 @@ public class BackedSimpleMVM<K extends Comparable<? super K>, P>
 
     private long versionNumCounter = 1;
 
-
     public BackedSimpleMVM(VersionListFactory<P> versionListFactory,
                            Class<P> payloadType,
                            KVStore kvStore) {
