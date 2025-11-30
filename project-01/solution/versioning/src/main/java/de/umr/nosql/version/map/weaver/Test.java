@@ -173,7 +173,7 @@ public class Test {
         System.out.println("~".repeat(35) + " BackedWeaverFrugalSkipList with " + kvStoreUsed + " " +
                 "~".repeat(35));
         WeaverSkipListVersionFactory<Payload> versionListFactory = new WeaverSkipListVersionFactory<>();
-        runTestPartC(data, versionListFactory, kvStore, 3);
+        runTestPartC(data, versionListFactory, kvStore, 5);
 
         System.out.println();
     }
@@ -209,6 +209,10 @@ public class Test {
             double insertionTime = (endInsertionTime - startInsertionTime)/ 1_000_000_000.0;
 
             System.out.println("(+) Insertion time: " + insertionTime + "s");
+
+            if (kvStore instanceof BenchmarkJedisStore benchmarkJedisStore) {
+                benchmarkJedisStore.enableQueryMode();
+            }
 
             long startQueryTime  = System.nanoTime();
 

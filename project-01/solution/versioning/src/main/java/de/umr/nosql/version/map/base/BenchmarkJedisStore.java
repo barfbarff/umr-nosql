@@ -13,9 +13,6 @@ import java.util.Map;
 //     Redis for every record
 public class BenchmarkJedisStore implements FlushableKVStore{
 
-    // Total number of records in the bench_mark.csv file
-    private static final int TOTAL_RECORD_NUM = 500000;
-
     // The number of records to be inserted into Redis at a time. Bulk insertion
     // avoids making multiple requests to Redis, and thus reduces RTT
     private static final int BATCH_SIZE = 5000;
@@ -37,12 +34,15 @@ public class BenchmarkJedisStore implements FlushableKVStore{
     // executed when the number of requests equals BATCH_SIZE
     private long putRequestNum = 0;
 
+    boolean queryMode = false;
+
     public BenchmarkJedisStore() {}
 
     @Override
     public void flushDB() {
         this.jedis.flushAll();
         this.putRequestNum = 0;
+        this.queryMode = false;
         this.writeBuffer.clear();
         this.cacheForSkipList.clear();
     }
@@ -59,13 +59,7 @@ public class BenchmarkJedisStore implements FlushableKVStore{
         // all records into Redis at once
         putRequestNum++;
         if (putRequestNum % BATCH_SIZE == 0) {
-            Pipeline pipeline = jedis.pipelined();
-
-            writeBuffer.forEach(pipeline::set);
-
-            pipeline.sync();
-
-            writeBuffer.clear();
+            flushWriteBuffer();
         }
     }
 
@@ -74,7 +68,7 @@ public class BenchmarkJedisStore implements FlushableKVStore{
         // Once all records in benchmark_data.csv are inserted to Redis, we always
         // get data from Redis. This ensures that the queries made after insertions
         // are always retrieved from Redis
-        if (putRequestNum == TOTAL_RECORD_NUM) {
+        if (queryMode) {
             return jedis.get(storeKey);
         }
 
@@ -87,6 +81,23 @@ public class BenchmarkJedisStore implements FlushableKVStore{
         }
 
         return null;
+    }
+
+    public void enableQueryMode() {
+        if (!writeBuffer.isEmpty()) {
+            flushWriteBuffer();
+        }
+
+        this.queryMode = true;
+        this.cacheForSkipList.clear();
+    }
+
+    private void flushWriteBuffer() {
+        try (Pipeline pipeline = jedis.pipelined()) {
+            writeBuffer.forEach(pipeline::set);
+            pipeline.sync();
+        }
+        writeBuffer.clear();
     }
 
     @Override

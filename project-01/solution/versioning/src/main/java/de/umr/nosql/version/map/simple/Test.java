@@ -263,6 +263,10 @@ public class Test {
 
             System.out.println("(+) Insertion time: " + insertionTime + "s");
 
+            if (kvStore instanceof BenchmarkJedisStore benchmarkJedisStore) {
+                benchmarkJedisStore.enableQueryMode();
+            }
+
             long startQueryTime  = System.nanoTime();
 
             for (int testTimestamp : testTimestamps) {
