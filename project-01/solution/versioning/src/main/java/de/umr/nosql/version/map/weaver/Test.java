@@ -58,15 +58,51 @@ public class Test {
 
         ~~~ BackedWeaverFrugalSkipList with BenchmarkJedisStore ~~~
         Elapsed time of iteration 0
-        (+) Insertion time: 8.6346444s
-        (+) Query time: 0.2355769s
+        (+) Insertion time: 7.8149197s
+        (+) Query time: 9.8208459s
         Elapsed time of iteration 1
-        (+) Insertion time: 7.5080826s
-        (+) Query time: 0.1475895s
+        (+) Insertion time: 7.3749106s
+        (+) Query time: 10.4166883s
         Elapsed time of iteration 2
-        (+) Insertion time: 7.6857282s
-        (+) Query time: 0.0958363s
-        Average Elapsed Time (in seconds): 8.102485966666666s
+        (+) Insertion time: 7.5849641s
+        (+) Query time: 12.5661715s
+        Elapsed time of iteration 3
+        (+) Insertion time: 8.0095631s
+        (+) Query time: 10.632147s
+        Elapsed time of iteration 4
+        (+) Insertion time: 7.7060279s
+        (+) Query time: 10.7181609s
+        Average Elapsed Time (in seconds): 18.5288798s
+
+        ~~~ BackedWeaverFrugalSkipList with SimpleJedisStore ~~~
+        Elapsed time of iteration 0
+        (+) Insertion time: 1335.8934506s
+        (+) Query time: 8.5756059s
+        Elapsed time of iteration 1
+        (+) Insertion time: 1368.5966955s
+        (+) Query time: 8.8254394s
+        Elapsed time of iteration 2
+        (+) Insertion time: 1253.8559629s
+        (+) Query time: 8.4986875s
+        Average Elapsed Time (in seconds): 1328.08s
+
+
+        +++++++++++++++++++
+        +++ EXPLANATION +++
+        +++++++++++++++++++
+        It can be seen from the benchmark given above that BackedVWeaverMVM takes more time for
+        construction than BackedSimpleMVM. This is because BackedVWeaverMVM incurs additional
+        overhead during insertion to calculate Weaving links. Specifically, it searches for a visible
+        version in the "next" record's version list to establish the kRidgy shortcut whenever new
+        data is appended.
+
+        However, when it comes to query performance, BackedVWeaverMVM significantly outperforms
+        BackedSimpleMVM. As shown in the benchmarks for BackedSimpleMVM (provided in the Test class
+        under the "simple" folder), the average elapsed time for querying is 54.38s. On the other
+        hand, the same metric for BackedVWeaverMVM is approximately 9.73s.
+        +++++++++++++++++++
+
+        ~ Note: We didn't do Part (C) of Task 1.4 :) Thanks for checking our solutions! ~
          */
 
         InputStream testDataStream = Test.class.getResourceAsStream("/test_data.csv");
@@ -78,7 +114,7 @@ public class Test {
 
             List<Map.Entry<String, Payload>> benchmarkData = readData(benchmarkDataStream);
             testPartCWithBenchmarkJedis(benchmarkData);
-//            testPartCWithSimpleJedis(benchmarkData);
+            testPartCWithSimpleJedis(benchmarkData);
 
         } catch (IOException e) {
             e.printStackTrace();

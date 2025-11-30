@@ -72,27 +72,27 @@ public class Test {
 
         ~~~ BackedFrugalSkipList with BenchmarkJedisStore ~~~
         Elapsed time of iteration 0
-        (+) Insertion time: 7.841744s
-        (+) Query time: 65.5084027s
+        (+) Insertion time: 7.8341952s
+        (+) Query time: 57.9055003s
         Elapsed time of iteration 1
-        (+) Insertion time: 5.7993283s
-        (+) Query time: 60.5550804s
+        (+) Insertion time: 5.137299s
+        (+) Query time: 52.5212997s
         Elapsed time of iteration 2
-        (+) Insertion time: 6.1995452s
-        (+) Query time: 71.7338426s
-        Average Elapsed Time (in seconds): 72.54598106666667s
+        (+) Insertion time: 5.081954s
+        (+) Query time: 53.9627631s
+        Average Elapsed Time (in seconds): 60.814337099999996s
 
         ~~~ BackedVLinkedList with SimpleJedisStore ~~~
         Elapsed time of iteration 0
-        (+) Insertion time: 4.4245993s
-        (+) Query time: 2236.696251s
+        (+) Insertion time: 274.8680302s
+        (+) Query time: 2550.0219351s
         Elapsed time of iteration 1
-        (+) Insertion time: 4.7296271s
-        (+) Query time: 1918.1507774s
+        (+) Insertion time: 270.0265226s
+        (+) Query time: 2044.3842188s
         Elapsed time of iteration 2
-        (+) Insertion time: 3.3014399s
-        (+) Query time: 1818.6840688s
-        Average Elapsed Time (in seconds): 1995.3289211666668s
+        (+) Insertion time: 257.3208873s
+        (+) Query time: 2080.8795873s
+        Average Elapsed Time (in seconds): 2492.5003937666665s
 
         ~~~ BackedFrugalSkipList with SimpleJedisStore ~~~
         Elapsed time of iteration 0
@@ -105,6 +105,26 @@ public class Test {
         (+) Insertion time: 754.9374085s
         (+) Query time: 52.3944929s
         Average Elapsed Time (in seconds): 793.2405254666666s
+
+        +++++++++++++++++++
+        +++ EXPLANATION +++
+        +++++++++++++++++++
+        It can be seen from the benchmarks given above that
+        (+) Insertion Time: SimpleJedisStore spends significantly more time on insertion than
+                            BenchmarkJedisStore, as BenchmarkJedisStore caches inserted
+                            values locally to Redis for the sake of constructing BackedFrugalSkipList
+                            and inserts data in bulks.
+        (+) Query Time: BackedFrugalSkipList has superior performance compared to BackedVLinkedList
+                        as BackedFrugalSkipList allows the application to quickly jump through
+                        different version stacks by comparing the requested timestamp with
+                        the timestamp of the nodes on the top of the stack and traversing
+                        ridgy links. By doing so, the application can quickly determine the
+                        potential version stack for looking a visible version for the given
+                        timestamp, compared to BackedVLinkedList. On the other hand,
+                        BackedVLinkedList always starts the search process for any timestamp at the
+                        head of the version list. That is, the older the version, the longer it takes
+                        for BackedVLinkedList to find it.
+        +++++++++++++++++++
          */
 
         InputStream testDataStream = Test.class.getResourceAsStream("/test_data.csv");
@@ -116,7 +136,7 @@ public class Test {
 
             List<Map.Entry<String, Payload>> benchmarkData = readData(benchmarkDataStream);
             testPartCWithBenchmarkJedis(benchmarkData);
-//            testPartCWithSimpleJedis(benchmarkData);
+            testPartCWithSimpleJedis(benchmarkData);
 
         } catch (IOException e) {
             e.printStackTrace();
